@@ -86,6 +86,7 @@ const withPostCounts = (entries, totalPosts) => {
 
 	return normalizedEntries
 		.sort((a, b) => b.remainder - a.remainder)
+		.map((entry) => {
 			if (remainingPosts > 0) {
 				remainingPosts -= 1;
 				return {
