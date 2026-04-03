@@ -14,7 +14,7 @@ const StrategicOverview = () => {
       <CardHeader>
         <CardTitle className="text-lg sm:text-xl">Strategic overview</CardTitle>
         <CardDescription className="text-sm">
-          Detailed emotion breakdown across all posts and comments
+          Bank mention trends and geographic distribution across the analyzed dataset
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">
