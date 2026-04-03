@@ -9,13 +9,13 @@ const Header = () => {
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div className="flex items-center gap-4">
         {/* Prime Logo */}
-        <div className="h-10 sm:h-12 w-auto flex-shrink-0 bg-white rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm p-1.5">
+        <div className="h-12 w-12 flex-shrink-0 bg-white rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm">
           <Image
             src="/prime.webp"
-            alt="Prime Logo"
-            width={600}
-            height={300}
-            className="h-full w-auto object-contain"
+            alt="Prime Bank Logo"
+            width={64}
+            height={64}
+            className="h-full w-full object-cover scale-110"
             priority
             unoptimized
           />
