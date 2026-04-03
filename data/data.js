@@ -1,5 +1,4 @@
-export const data = {
-  action_items: [
+const actionItems = [
     {
       "author_name": "Sadman Saif Ahmed",
       "category": "Inquiry",
@@ -200,7 +199,17 @@ export const data = {
       "type": "post",
       "virality_score": 170.5
     }
-  ],
+];
+
+const actionItemsByMonth = {
+  last_month: actionItems.slice(0, 4),
+  previous_month: actionItems.slice(4, 7),
+  month_before: actionItems.slice(7, 10),
+};
+
+export const data = {
+  action_items: actionItems,
+  action_items_by_month: actionItemsByMonth,
   ai_overview: {
     complaints: [
       "**Complaint Types:** Complaints are mainly about service delays, such as card issuance and account activation, and technical issues with digital services.",

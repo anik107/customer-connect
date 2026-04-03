@@ -46,6 +46,63 @@ const SENTIMENT_ORDER = ['positive', 'neutral', 'negative'];
 
 const formatPercent = (value = 0) => `${Math.round(value)}%`;
 
+const formatPostCount = (value = 0) =>
+	`${value.toLocaleString('en')} ${value === 1 ? 'post' : 'posts'}`;
+
+const withPostCounts = (entries, totalPosts) => {
+	if (!entries.length) {
+		return [];
+	}
+
+	if (!totalPosts) {
+		return entries.map((entry) => ({
+			...entry,
+			postCount: 0,
+		}));
+	}
+
+	const totalShare = entries.reduce((sum, entry) => sum + entry.value, 0);
+
+	if (!totalShare) {
+		return entries.map((entry) => ({
+			...entry,
+			postCount: 0,
+		}));
+	}
+
+	const normalizedEntries = entries.map((entry) => {
+		const exactCount = (entry.value / totalShare) * totalPosts;
+
+		return {
+			...entry,
+			postCount: Math.floor(exactCount),
+			remainder: exactCount % 1,
+		};
+	});
+
+	let remainingPosts =
+		totalPosts -
+		normalizedEntries.reduce((sum, entry) => sum + entry.postCount, 0);
+
+	return normalizedEntries
+		.sort((a, b) => b.remainder - a.remainder)
+			if (remainingPosts > 0) {
+				remainingPosts -= 1;
+				return {
+					...entry,
+					postCount: entry.postCount + 1,
+				};
+			}
+
+			return entry;
+		})
+		.sort(
+			(a, b) =>
+				SENTIMENT_ORDER.indexOf(a.key) - SENTIMENT_ORDER.indexOf(b.key),
+		)
+		.map(({ remainder, ...entry }) => entry);
+};
+
 const getMonthFilterOptions = () => [
 	{ key: 'last_month', label: 'Last Month' },
 	{ key: 'previous_month', label: 'Previous Month' },
@@ -76,6 +133,7 @@ const renderOuterLabel = ({
 	outerRadius,
 	name,
 	value,
+	postCount,
 	fill,
 	isMobile = false,
 }) => {
@@ -87,13 +145,17 @@ const renderOuterLabel = ({
 	const lineOffset = isMobile ? 10 : 18;
 	const labelGap = isMobile ? 4 : 6;
 	const titleY = isMobile ? 6 : 8;
-	const valueY = isMobile ? 16 : 10;
+	const valueY = isMobile ? 12 : 10;
+	const postCountY = isMobile ? 24 : 26;
 	const titleClass = isMobile
 		? 'fill-slate-900 text-[10px] font-semibold dark:fill-slate-100'
 		: 'fill-slate-900 text-[12px] font-semibold dark:fill-slate-100';
 	const valueClass = isMobile
 		? 'text-[10px] font-semibold'
 		: 'text-[12px] font-semibold';
+	const postCountClass = isMobile
+		? 'fill-slate-500 text-[9px] font-medium dark:fill-slate-300'
+		: 'fill-slate-500 text-[11px] font-medium dark:fill-slate-300';
 	const startX = cx + (outerRadius + startOffset) * cos;
 	const startY = cy + (outerRadius + startOffset) * sin;
 	const midX = cx + (outerRadius + bendOffset) * cos;
@@ -130,6 +192,14 @@ const renderOuterLabel = ({
 			>
 				{`${Math.round(value)}%`}
 			</text>
+			<text
+				x={labelX}
+				y={endY + postCountY}
+				textAnchor={textAnchor}
+				className={postCountClass}
+			>
+				{formatPostCount(postCount)}
+			</text>
 		</g>
 	);
 };
@@ -158,6 +228,9 @@ const CustomTooltip = ({ active, payload }) => {
 			</p>
 			<p className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-50">
 				{formatPercent(point?.value)}
+			</p>
+			<p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-300">
+				{formatPostCount(point?.postCount || 0)}
 			</p>
 		</div>
 	);
@@ -210,9 +283,9 @@ const SentimentDistribution = () => {
 		color: SENTIMENT_META[key]?.color || SENTIMENT_META.neutral.color,
 	}));
 
-	const chartData = sentimentEntries;
-	const visibleTotal = chartData.reduce((sum, item) => sum + item.value, 0);
 	const totalPosts = Number(postCategories.total_number_of_posts || 0);
+	const chartData = withPostCounts(sentimentEntries, totalPosts);
+	const visibleTotal = chartData.reduce((sum, item) => sum + item.value, 0);
 	const dominantSentiment = sentimentEntries.reduce(
 		(best, current) => (current.value > best.value ? current : best),
 		sentimentEntries[0] || { label: 'N/A', value: 0 },
