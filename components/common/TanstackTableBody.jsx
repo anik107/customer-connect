@@ -21,9 +21,12 @@ const TanstackTableBody = ({
     );
   if (!loading && data.length === 0)
     return (
-      <tr className="border-b hover:bg-slate-50/50 dark:hover:bg-slate-700/50">
-        <td colSpan={columns.length}>
-          <BlankMessage message="No data found" />
+      <tr>
+        <td
+          colSpan={columns.length}
+          className="whitespace-nowrap p-2 text-center sm:p-3"
+        >
+          No posts found!
         </td>
       </tr>
     );

@@ -27,6 +27,13 @@ const getMonthFilterOptions = () => [
 	{ key: 'month_before', label: 'Two Months Ago' },
 ];
 
+const getSentimentFilterOptions = () => [
+	{ key: 'all', label: 'All Sentiments' },
+	{ key: 'positive', label: 'Positive' },
+	{ key: 'neutral', label: 'Neutral' },
+	{ key: 'negative', label: 'Negative' },
+];
+
 const getPeriodPhrase = (selectedFilter, options) => {
 	const activeLabel =
 		options.find((option) => option.key === selectedFilter)?.label ||
@@ -98,6 +105,8 @@ const compareValues = (leftValue, rightValue) => {
 const ActionItems = () => {
 	const [actionItems, setActionItems] = useState([]);
 	const [selectedMonthFilter, setSelectedMonthFilter] = useState('all');
+	const [selectedSentimentFilter, setSelectedSentimentFilter] =
+		useState('all');
 	const [page, setPage] = useState(1);
 	const limit = 4;
 	const [sortConfig, setSortConfig] = useState({
@@ -107,6 +116,7 @@ const ActionItems = () => {
 	const [error, setError] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const monthFilterOptions = getMonthFilterOptions();
+	const sentimentFilterOptions = getSentimentFilterOptions();
 
 	useEffect(() => {
 		try {
@@ -149,13 +159,22 @@ const ActionItems = () => {
 	}, [actionItems, selectedMonthFilter]);
 
 	const sortedActionItems = useMemo(() => {
-		const items = [...datedActionItems];
+		const items = datedActionItems.filter((item) => {
+			if (selectedSentimentFilter === 'all') {
+				return true;
+			}
+
+			return (
+				String(item.sentiment || '').toLowerCase() ===
+				selectedSentimentFilter
+			);
+		});
 
 		if (!sortConfig.key) {
-			return items;
+			return [...items];
 		}
 
-		return items.sort((left, right) => {
+		return [...items].sort((left, right) => {
 			const comparison = compareValues(
 				left?.[sortConfig.key],
 				right?.[sortConfig.key],
@@ -163,11 +182,11 @@ const ActionItems = () => {
 
 			return sortConfig.direction === 'asc' ? comparison : -comparison;
 		});
-	}, [datedActionItems, sortConfig]);
+	}, [datedActionItems, selectedSentimentFilter, sortConfig]);
 
 	useEffect(() => {
 		setPage(1);
-	}, [selectedMonthFilter, sortConfig]);
+	}, [selectedMonthFilter, selectedSentimentFilter, sortConfig]);
 
 	const totalResults = sortedActionItems.length;
 	const effectiveLimit =
@@ -348,7 +367,26 @@ const ActionItems = () => {
 							{' '}{activePeriodPhrase}.
 						</CardDescription>
 					</div>
-					<div className="w-full sm:w-auto sm:min-w-[220px]">
+					<div className="grid w-full gap-3 sm:w-auto sm:min-w-[220px] sm:grid-cols-2">
+						<div className="relative">
+							<select
+								id="action-items-sentiment-filter"
+								value={selectedSentimentFilter}
+								onChange={(event) =>
+									setSelectedSentimentFilter(
+										event.target.value,
+									)
+								}
+								className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-10 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:shadow-none dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
+							>
+								{sentimentFilterOptions.map((option) => (
+									<option key={option.key} value={option.key}>
+										{option.label}
+									</option>
+								))}
+							</select>
+							<ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-300" />
+						</div>
 						<div className="relative">
 							<select
 								id="action-items-month-filter"
