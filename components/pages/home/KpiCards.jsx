@@ -79,7 +79,7 @@ const KpiCards = () => {
             <CardContent>
               <div className="space-y-1">
                 <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
-                  EBL Bank Posts
+                  Prime Bank Posts
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Posts & Comments

@@ -8,11 +8,11 @@ const Header = () => {
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div className="flex items-center gap-4">
-        {/* EBL Logo */}
+        {/* Prime Logo */}
         <div className="h-10 sm:h-12 w-auto flex-shrink-0 bg-white rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm p-1.5">
           <Image
-            src="/ebl-logo.jpg"
-            alt="EBL Logo"
+            src="/prime.webp"
+            alt="Prime Logo"
             width={600}
             height={300}
             className="h-full w-auto object-contain"
@@ -25,7 +25,7 @@ const Header = () => {
         {/* Title */}
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            EBL Connect
+            Prime Connect
           </h1>
           <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">
             Social Media Analytics

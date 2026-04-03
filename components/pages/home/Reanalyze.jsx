@@ -34,11 +34,11 @@ export function Reanalyze() {
           </DialogHeader>
           <div className="grid gap-4">
             <div className="grid gap-3">
-              <Label htmlFor="name-1">EBL Bank Posts</Label>
+              <Label htmlFor="name-1">Prime Bank Posts</Label>
               <Input
                 id="name-1"
                 name="name"
-                placeholder="EBL Bank posts..."
+                placeholder="Prime Bank posts..."
               />
             </div>
             <div className="grid gap-3">

@@ -1,4 +1,4 @@
-# EBL Bank Sentiment Analysis Dashboard
+# Prime Bank Sentiment Analysis Dashboard
 
 A comprehensive sentiment analysis dashboard for analyzing social media posts and comments about banks. This Next.js application provides real-time insights into customer sentiment, emotions, geographic distribution, and actionable recommendations.
 
