@@ -108,7 +108,6 @@ export default function AiOverview() {
                             const insights = catValue?.analysis || catValue?.ai_recommendations;
                             
                             if (!insights) return null;
-
                             return (
                                 <section key={catKey}>
                                     <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
