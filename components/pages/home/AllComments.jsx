@@ -283,6 +283,14 @@ const AllComments = () => {
       ),
     },
     {
+      accessorKey: "comment_time",
+      header: "Date",
+      cell: ({ row }) =>
+        row.getValue("comment_time")
+          ? dayjs(row.getValue("comment_time")).format("DD MMM, YYYY")
+          : "-",
+    },
+    {
       accessorKey: "source",
       header: () => <div className="w-[72px] min-w-[72px] text-center">Source</div>,
       cell: ({ row }) => <SourceBadge source={row.getValue("source")} />,
@@ -300,14 +308,6 @@ const AllComments = () => {
       cell: ({ row }) => (
         <div className="text-center">{row.getValue("comment_replies")}</div>
       ),
-    },
-    {
-      accessorKey: "comment_time",
-      header: "Date",
-      cell: ({ row }) =>
-        row.getValue("comment_time")
-          ? dayjs(row.getValue("comment_time")).format("DD MMM, YYYY")
-          : "-",
     },
     {
       accessorKey: "virality_score",
@@ -379,6 +379,7 @@ const AllComments = () => {
               <colgroup>
                 <col style={{ width: "44px" }} />
                 <col style={{ width: "220px" }} />
+                <col style={{ width: "110px" }} />
                 <col style={{ width: "72px" }} />
                 <col />
                 <col />
