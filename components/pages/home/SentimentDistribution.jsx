@@ -105,13 +105,35 @@ const withPostCounts = (entries, totalPosts) => {
 };
 
 const getMonthFilterOptions = () => [
+	{ key: 'all', label: 'All' },
 	{ key: 'last_month', label: 'Last Month' },
 	{ key: 'previous_month', label: 'Previous Month' },
 	{ key: 'month_before', label: 'Two Months Ago' },
 ];
 
+const getPeriodPhrase = (selectedFilter, options) => {
+	const activeLabel =
+		options.find((option) => option.key === selectedFilter)?.label ||
+		'selected period';
+
+	const phraseMap = {
+		all: 'all available periods',
+		last_month: 'last month',
+		previous_month: 'the previous month',
+		month_before: 'two months ago',
+	};
+
+	return phraseMap[selectedFilter] || activeLabel.toLowerCase();
+};
+
 const getSnapshotByFilter = (selectedFilter) => {
 	const sentimentAnalysis = data.sentiment_analysis || {};
+	if (selectedFilter === 'all') {
+		return {
+			sentiment: sentimentAnalysis.sentiment_distribution || {},
+			postCategories: sentimentAnalysis.post_categories || {},
+		};
+	}
 	const monthlySentiment =
 		sentimentAnalysis.monthly_sentiment_distribution?.[selectedFilter] ||
 		sentimentAnalysis.sentiment_distribution_by_month?.[selectedFilter] ||
@@ -239,7 +261,7 @@ const CustomTooltip = ({ active, payload }) => {
 
 const SentimentDistribution = () => {
 	const [sentiment, setSentiment] = useState({});
-	const [selectedMonthFilter, setSelectedMonthFilter] = useState('last_month');
+	const [selectedMonthFilter, setSelectedMonthFilter] = useState('all');
 	const [postCategories, setPostCategories] = useState({});
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
@@ -248,7 +270,7 @@ const SentimentDistribution = () => {
 
 	useEffect(() => {
 		try {
-			const defaultSnapshot = getSnapshotByFilter('last_month');
+			const defaultSnapshot = getSnapshotByFilter('all');
 			setSentiment(defaultSnapshot.sentiment);
 			setPostCategories(defaultSnapshot.postCategories);
 		} catch (err) {
@@ -286,14 +308,18 @@ const SentimentDistribution = () => {
 
 	const totalPosts = Number(postCategories.total_number_of_posts || 0);
 	const chartData = withPostCounts(sentimentEntries, totalPosts);
-	const visibleTotal = chartData.reduce((sum, item) => sum + item.value, 0);
+	const visiblePostTotal = chartData.reduce(
+		(sum, item) => sum + item.postCount,
+		0,
+	);
 	const dominantSentiment = sentimentEntries.reduce(
 		(best, current) => (current.value > best.value ? current : best),
 		sentimentEntries[0] || { label: 'N/A', value: 0 },
 	) || { label: 'N/A', value: 0 };
-	const activeMonthLabel =
-		monthFilterOptions.find((option) => option.key === selectedMonthFilter)
-			?.label || 'selected period';
+	const activePeriodPhrase = getPeriodPhrase(
+		selectedMonthFilter,
+		monthFilterOptions,
+	);
 
 	let content = null;
 
@@ -334,7 +360,7 @@ const SentimentDistribution = () => {
 								</p>
 								<p className="text-sm text-slate-500 dark:text-slate-300">
 									{formatPercent(dominantSentiment.value)} of
-									total mentions
+									total posts
 								</p>
 							</div>
 						</div>
@@ -401,7 +427,7 @@ const SentimentDistribution = () => {
 														dominantBaseline="central"
 														className="fill-slate-400 text-[11px] font-medium dark:fill-slate-300"
 													>
-														Total
+														Posts
 													</text>
 													<text
 														x={viewBox.cx}
@@ -413,7 +439,7 @@ const SentimentDistribution = () => {
 														dominantBaseline="central"
 														className="fill-slate-900 text-[24px] font-semibold dark:fill-slate-50 sm:text-[30px]"
 													>
-														{visibleTotal}
+														{visiblePostTotal.toLocaleString('en')}
 													</text>
 												</g>
 											);
@@ -478,8 +504,8 @@ const SentimentDistribution = () => {
 				</div>
 					<CardDescription className="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-200">
 						Current snapshot of positive, neutral, and negative
-						conversation share across analyzed posts for the{' '}
-						{activeMonthLabel.toLowerCase()}.
+						conversation share across analyzed posts for{' '}
+						{activePeriodPhrase}.
 					</CardDescription>
 				</div>
 			</CardHeader>

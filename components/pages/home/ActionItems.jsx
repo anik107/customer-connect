@@ -11,17 +11,42 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { data } from '@/data/data';
 import dayjs from 'dayjs';
-import { ChevronDown, ChevronUp, Terminal } from 'lucide-react';
+import {
+	ChevronDown,
+	ChevronLeft,
+	ChevronRight,
+	ChevronUp,
+	Terminal,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 const getMonthFilterOptions = () => [
+	{ key: 'all', label: 'All' },
 	{ key: 'last_month', label: 'Last Month' },
 	{ key: 'previous_month', label: 'Previous Month' },
 	{ key: 'month_before', label: 'Two Months Ago' },
 ];
 
+const getPeriodPhrase = (selectedFilter, options) => {
+	const activeLabel =
+		options.find((option) => option.key === selectedFilter)?.label ||
+		'selected period';
+
+	const phraseMap = {
+		all: 'all available periods',
+		last_month: 'last month',
+		previous_month: 'the previous month',
+		month_before: 'two months ago',
+	};
+
+	return phraseMap[selectedFilter] || activeLabel.toLowerCase();
+};
+
 const getActionItemsByFilter = (selectedFilter) => {
 	const sentimentAnalysis = data.sentiment_analysis || {};
+	if (selectedFilter === 'all') {
+		return data.action_items || [];
+	}
 
 	return (
 		data.action_items_by_month?.[selectedFilter] ||
@@ -72,8 +97,9 @@ const compareValues = (leftValue, rightValue) => {
 
 const ActionItems = () => {
 	const [actionItems, setActionItems] = useState([]);
-	const [selectedMonthFilter, setSelectedMonthFilter] =
-		useState('last_month');
+	const [selectedMonthFilter, setSelectedMonthFilter] = useState('all');
+	const [page, setPage] = useState(1);
+	const limit = 4;
 	const [sortConfig, setSortConfig] = useState({
 		key: 'virality_score',
 		direction: 'desc',
@@ -84,7 +110,7 @@ const ActionItems = () => {
 
 	useEffect(() => {
 		try {
-			setActionItems(getActionItemsByFilter('last_month'));
+			setActionItems(getActionItemsByFilter('all'));
 		} catch (err) {
 			setError('Unable to load action items.');
 		} finally {
@@ -101,12 +127,14 @@ const ActionItems = () => {
 		}
 	}, [selectedMonthFilter]);
 
-	const activeMonthLabel =
-		monthFilterOptions.find((option) => option.key === selectedMonthFilter)
-			?.label || 'selected period';
+	const activePeriodPhrase = getPeriodPhrase(
+		selectedMonthFilter,
+		monthFilterOptions,
+	);
 
 	const datedActionItems = useMemo(() => {
 		const baseDates = {
+			all: '2025-06-30T12:00:00.000Z',
 			last_month: '2025-06-20T12:00:00.000Z',
 			previous_month: '2025-05-20T12:00:00.000Z',
 			month_before: '2025-04-20T12:00:00.000Z',
@@ -136,6 +164,33 @@ const ActionItems = () => {
 			return sortConfig.direction === 'asc' ? comparison : -comparison;
 		});
 	}, [datedActionItems, sortConfig]);
+
+	useEffect(() => {
+		setPage(1);
+	}, [selectedMonthFilter, sortConfig]);
+
+	const totalResults = sortedActionItems.length;
+	const effectiveLimit =
+		selectedMonthFilter === 'all' ? Math.max(totalResults, 1) : limit;
+	const lastPage = Math.max(1, Math.ceil(totalResults / effectiveLimit));
+	const paginatedActionItems = sortedActionItems.slice(
+		(page - 1) * effectiveLimit,
+		page * effectiveLimit,
+	);
+	const visibleStart =
+		totalResults === 0 ? 0 : (page - 1) * effectiveLimit + 1;
+	const visibleEnd =
+		totalResults === 0
+			? 0
+			: Math.min(
+					(page - 1) * effectiveLimit + paginatedActionItems.length,
+					totalResults,
+				);
+
+	const handlePageChange = (newPage) => {
+		if (newPage > lastPage || newPage === 0) return;
+		setPage(newPage);
+	};
 
 	const handleSort = (key) => {
 		setSortConfig((current) => {
@@ -215,7 +270,7 @@ const ActionItems = () => {
 				</td>
 			</tr>
 		);
-	} else if (sortedActionItems?.length === 0) {
+	} else if (paginatedActionItems?.length === 0) {
 		content = (
 			<tr>
 				<td
@@ -227,17 +282,17 @@ const ActionItems = () => {
 			</tr>
 		);
 	} else {
-		content = sortedActionItems.map((row, index) => (
+		content = paginatedActionItems.map((row, index) => (
 			<tr
 				key={index}
 				className="border-b hover:bg-slate-50/50 dark:hover:bg-slate-700/50"
 			>
 				<td className="sticky left-0 whitespace-nowrap border-r bg-white p-2 dark:bg-slate-800 sm:p-3">
 					<div
-						className="w-[16px] min-w-[16px] truncate font-bold"
-						title={index + 1}
+						className="w-[28px] min-w-[28px] truncate font-bold"
+						title={(page - 1) * limit + index + 1}
 					>
-						{index + 1}
+						{(page - 1) * limit + index + 1}
 					</div>
 				</td>
 				<td className="whitespace-nowrap p-2 sm:p-3">
@@ -290,7 +345,7 @@ const ActionItems = () => {
 						</CardTitle>
 						<CardDescription className="mt-1 text-sm">
 							Recommended actions based on sentiment analysis for
-							the {activeMonthLabel.toLowerCase()}.
+							{' '}{activePeriodPhrase}.
 						</CardDescription>
 					</div>
 					<div className="w-full sm:w-auto sm:min-w-[220px]">
@@ -322,7 +377,7 @@ const ActionItems = () => {
 					<div className="max-h-[50vh] overflow-x-auto overflow-y-auto rounded-lg border sm:max-h-96">
 						<table className="min-w-full table-fixed text-xs sm:text-sm">
 							<colgroup>
-								<col style={{ width: '32px' }} />
+								<col style={{ width: '44px' }} />
 								<col style={{ width: '96px' }} />
 								<col style={{ width: '96px' }} />
 								<col style={{ width: '72px' }} />
@@ -338,7 +393,7 @@ const ActionItems = () => {
 							<thead className="sticky top-0 z-30 bg-slate-50 dark:bg-slate-700">
 								<tr className="border-b">
 									<th className="sticky left-0 top-0 z-[50] whitespace-nowrap border-r bg-slate-50 p-2 text-left font-medium dark:bg-slate-700 sm:p-3">
-										<div className="w-[32px] min-w-[32px]">
+										<div className="w-[44px] min-w-[44px]">
 											#
 										</div>
 									</th>
@@ -416,6 +471,30 @@ const ActionItems = () => {
 							</thead>
 							<tbody>{content}</tbody>
 						</table>
+					</div>
+				</div>
+				<div className="mt-6 flex items-center justify-between">
+					<div className="text-sm text-gray-600">
+						Showing {visibleStart} to {visibleEnd} of {totalResults}{' '}
+						results
+					</div>
+					<div className="flex flex-row items-center justify-center">
+						<button
+							type="button"
+							className="flex h-[36px] w-[36px] cursor-pointer items-center justify-center rounded-l-sm border border-[#B0B1B7] text-[#0D3D4B] disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
+							onClick={() => handlePageChange(page - 1)}
+							disabled={page === 1}
+						>
+							<ChevronLeft className="size-6" />
+						</button>
+						<button
+							type="button"
+							className="flex h-[36px] w-[36px] cursor-pointer items-center justify-center rounded-r-sm border border-[#B0B1B7] border-l-0 text-[#0D3D4B] disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
+							onClick={() => handlePageChange(page + 1)}
+							disabled={page === lastPage}
+						>
+							<ChevronRight className="size-6" />
+						</button>
 					</div>
 				</div>
 			</CardContent>

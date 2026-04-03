@@ -56,14 +56,34 @@ const getSourceFromUrl = (url = '') => {
 };
 
 const monthFilterOptions = [
+	{ key: 'all', label: 'All' },
 	{ key: 'last_month', label: 'Last Month' },
 	{ key: 'previous_month', label: 'Previous Month' },
 	{ key: 'month_before', label: 'Two Months Ago' },
 ];
 
+const getPeriodPhrase = (selectedFilter, options) => {
+	const activeLabel =
+		options.find((option) => option.key === selectedFilter)?.label ||
+		'selected period';
+
+	const phraseMap = {
+		all: 'all available periods',
+		last_month: 'last month',
+		previous_month: 'the previous month',
+		month_before: 'two months ago',
+	};
+
+	return phraseMap[selectedFilter] || activeLabel.toLowerCase();
+};
+
 const getItemsByMonth = (items = [], selectedMonthFilter) => {
 	if (!items.length) {
 		return [];
+	}
+
+	if (selectedMonthFilter === 'all') {
+		return items;
 	}
 
 	const firstCut = Math.ceil(items.length / 3);
@@ -203,8 +223,7 @@ const SourceBadge = ({ source }) => {
 
 const AllPosts = () => {
 	const [state, dispatch] = useReducer(reducer, initialState);
-	const [selectedMonthFilter, setSelectedMonthFilter] =
-		useState('last_month');
+	const [selectedMonthFilter, setSelectedMonthFilter] = useState('all');
 	const [sorting, setSorting] = useState([
 		{ id: 'reaction_count', desc: true },
 	]);
@@ -216,10 +235,11 @@ const AllPosts = () => {
 		dispatch({ type: 'RESET_ERROR' });
 
 		try {
-			const baseDates = {
-				last_month: '2025-06-20T12:00:00.000Z',
-				previous_month: '2025-05-20T12:00:00.000Z',
-				month_before: '2025-04-20T12:00:00.000Z',
+		const baseDates = {
+			all: '2025-06-30T12:00:00.000Z',
+			last_month: '2025-06-20T12:00:00.000Z',
+			previous_month: '2025-05-20T12:00:00.000Z',
+			month_before: '2025-04-20T12:00:00.000Z',
 			};
 			const baseDate =
 				baseDates[selectedMonthFilter] || baseDates.last_month;
@@ -275,9 +295,10 @@ const AllPosts = () => {
 		dispatch({ type: 'SET_PAGE', payload: 1 });
 	}, [selectedMonthFilter, sorting]);
 
-	const activeMonthLabel =
-		monthFilterOptions.find((option) => option.key === selectedMonthFilter)
-			?.label || 'selected period';
+	const activePeriodPhrase = getPeriodPhrase(
+		selectedMonthFilter,
+		monthFilterOptions,
+	);
 
 	const columns = (pageIndex, pageSize) => [
 		{
@@ -392,8 +413,7 @@ const AllPosts = () => {
 		<div className="mt-3">
 			<div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<p className="text-sm text-slate-500 dark:text-slate-300">
-					Showing processed posts for the{' '}
-					{activeMonthLabel.toLowerCase()}.
+					Showing processed posts for {activePeriodPhrase}.
 				</p>
 				<div className="w-full sm:w-auto sm:min-w-[220px]">
 					<div className="relative">

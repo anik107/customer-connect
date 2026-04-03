@@ -56,14 +56,34 @@ const getSourceFromUrl = (url = "") => {
 };
 
 const monthFilterOptions = [
+  { key: "all", label: "All" },
   { key: "last_month", label: "Last Month" },
   { key: "previous_month", label: "Previous Month" },
   { key: "month_before", label: "Two Months Ago" },
 ];
 
+const getPeriodPhrase = (selectedFilter, options) => {
+  const activeLabel =
+    options.find((option) => option.key === selectedFilter)?.label ||
+    "selected period";
+
+  const phraseMap = {
+    all: "all available periods",
+    last_month: "last month",
+    previous_month: "the previous month",
+    month_before: "two months ago",
+  };
+
+  return phraseMap[selectedFilter] || activeLabel.toLowerCase();
+};
+
 const getItemsByMonth = (items = [], selectedMonthFilter) => {
   if (!items.length) {
     return [];
+  }
+
+  if (selectedMonthFilter === "all") {
+    return items;
   }
 
   const firstCut = Math.ceil(items.length / 3);
@@ -109,6 +129,7 @@ const getPostsSnapshot = (selectedMonthFilter) => {
 
 const getCommentBaseDate = (selectedMonthFilter) => {
   const baseDates = {
+    all: "2025-06-30T12:00:00.000Z",
     last_month: "2025-06-20T12:00:00.000Z",
     previous_month: "2025-05-20T12:00:00.000Z",
     month_before: "2025-04-20T12:00:00.000Z",
@@ -187,7 +208,7 @@ const SourceBadge = ({ source }) => {
 
 const AllComments = () => {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const [selectedMonthFilter, setSelectedMonthFilter] = useState("last_month");
+  const [selectedMonthFilter, setSelectedMonthFilter] = useState("all");
   const [sorting, setSorting] = useState([{ id: "comment_time", desc: true }]);
 
   const { page, limit, loading, totalComments, comments, isError, error } =
@@ -253,9 +274,10 @@ const AllComments = () => {
     dispatch({ type: "SET_PAGE", payload: 1 });
   }, [selectedMonthFilter, sorting]);
 
-  const activeMonthLabel =
-    monthFilterOptions.find((option) => option.key === selectedMonthFilter)
-      ?.label || "selected period";
+  const activePeriodPhrase = getPeriodPhrase(
+    selectedMonthFilter,
+    monthFilterOptions,
+  );
 
   const columns = (pageIndex, pageSize) => [
     {
@@ -351,8 +373,7 @@ const AllComments = () => {
     <div className="mt-3">
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-slate-500 dark:text-slate-300">
-          Showing processed comments and reviews for the{" "}
-          {activeMonthLabel.toLowerCase()}.
+          Showing processed comments and reviews for {activePeriodPhrase}.
         </p>
         <div className="w-full sm:w-auto sm:min-w-[220px]">
           <div className="relative">

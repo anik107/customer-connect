@@ -324,17 +324,17 @@ export const data = {
       },
     },
     post_categories: {
-      complaint: "5%",
-      inquiry: "75%",
-      other: "0%",
-      praise: "20%",
-      suggestions: "0%",
-      total_number_of_posts: 20,
+      complaint: "8%",
+      inquiry: "68%",
+      other: "2%",
+      praise: "18%",
+      suggestions: "4%",
+      total_number_of_posts: 70,
     },
     sentiment_distribution: {
-      negative: "10%",
-      neutral: "70%",
-      positive: "20%",
+      negative: "13%",
+      neutral: "62%",
+      positive: "25%",
     },
     top_posts: [
       {
