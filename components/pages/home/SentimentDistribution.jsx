@@ -46,14 +46,94 @@ const SENTIMENT_ORDER = ['positive', 'neutral', 'negative'];
 
 const formatPercent = (value = 0) => `${Math.round(value)}%`;
 
+const formatPostCount = (value = 0) =>
+	`${value.toLocaleString('en')} ${value === 1 ? 'post' : 'posts'}`;
+
+const withPostCounts = (entries, totalPosts) => {
+	if (!entries.length) {
+		return [];
+	}
+
+	if (!totalPosts) {
+		return entries.map((entry) => ({
+			...entry,
+			postCount: 0,
+		}));
+	}
+
+	const totalShare = entries.reduce((sum, entry) => sum + entry.value, 0);
+
+	if (!totalShare) {
+		return entries.map((entry) => ({
+			...entry,
+			postCount: 0,
+		}));
+	}
+
+	const normalizedEntries = entries.map((entry) => {
+		const exactCount = (entry.value / totalShare) * totalPosts;
+
+		return {
+			...entry,
+			postCount: Math.floor(exactCount),
+			remainder: exactCount % 1,
+		};
+	});
+
+	let remainingPosts =
+		totalPosts -
+		normalizedEntries.reduce((sum, entry) => sum + entry.postCount, 0);
+
+	return normalizedEntries
+		.sort((a, b) => b.remainder - a.remainder)
+		.map((entry) => {
+			if (remainingPosts > 0) {
+				remainingPosts -= 1;
+				return {
+					...entry,
+					postCount: entry.postCount + 1,
+				};
+			}
+
+			return entry;
+		})
+		.sort(
+			(a, b) =>
+				SENTIMENT_ORDER.indexOf(a.key) - SENTIMENT_ORDER.indexOf(b.key),
+		)
+		.map(({ remainder, ...entry }) => entry);
+};
+
 const getMonthFilterOptions = () => [
+	{ key: 'all', label: 'All' },
 	{ key: 'last_month', label: 'Last Month' },
 	{ key: 'previous_month', label: 'Previous Month' },
 	{ key: 'month_before', label: 'Two Months Ago' },
 ];
 
+const getPeriodPhrase = (selectedFilter, options) => {
+	const activeLabel =
+		options.find((option) => option.key === selectedFilter)?.label ||
+		'selected period';
+
+	const phraseMap = {
+		all: 'all available periods',
+		last_month: 'last month',
+		previous_month: 'the previous month',
+		month_before: 'two months ago',
+	};
+
+	return phraseMap[selectedFilter] || activeLabel.toLowerCase();
+};
+
 const getSnapshotByFilter = (selectedFilter) => {
 	const sentimentAnalysis = data.sentiment_analysis || {};
+	if (selectedFilter === 'all') {
+		return {
+			sentiment: sentimentAnalysis.sentiment_distribution || {},
+			postCategories: sentimentAnalysis.post_categories || {},
+		};
+	}
 	const monthlySentiment =
 		sentimentAnalysis.monthly_sentiment_distribution?.[selectedFilter] ||
 		sentimentAnalysis.sentiment_distribution_by_month?.[selectedFilter] ||
@@ -76,6 +156,7 @@ const renderOuterLabel = ({
 	outerRadius,
 	name,
 	value,
+	postCount,
 	fill,
 	isMobile = false,
 }) => {
@@ -87,13 +168,17 @@ const renderOuterLabel = ({
 	const lineOffset = isMobile ? 10 : 18;
 	const labelGap = isMobile ? 4 : 6;
 	const titleY = isMobile ? 6 : 8;
-	const valueY = isMobile ? 16 : 10;
+	const valueY = isMobile ? 12 : 10;
+	const postCountY = isMobile ? 24 : 26;
 	const titleClass = isMobile
 		? 'fill-slate-900 text-[10px] font-semibold dark:fill-slate-100'
 		: 'fill-slate-900 text-[12px] font-semibold dark:fill-slate-100';
 	const valueClass = isMobile
 		? 'text-[10px] font-semibold'
 		: 'text-[12px] font-semibold';
+	const postCountClass = isMobile
+		? 'fill-slate-500 text-[9px] font-medium dark:fill-slate-300'
+		: 'fill-slate-500 text-[11px] font-medium dark:fill-slate-300';
 	const startX = cx + (outerRadius + startOffset) * cos;
 	const startY = cy + (outerRadius + startOffset) * sin;
 	const midX = cx + (outerRadius + bendOffset) * cos;
@@ -130,6 +215,14 @@ const renderOuterLabel = ({
 			>
 				{`${Math.round(value)}%`}
 			</text>
+			<text
+				x={labelX}
+				y={endY + postCountY}
+				textAnchor={textAnchor}
+				className={postCountClass}
+			>
+				{formatPostCount(postCount)}
+			</text>
 		</g>
 	);
 };
@@ -159,13 +252,16 @@ const CustomTooltip = ({ active, payload }) => {
 			<p className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-50">
 				{formatPercent(point?.value)}
 			</p>
+			<p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-300">
+				{formatPostCount(point?.postCount || 0)}
+			</p>
 		</div>
 	);
 };
 
 const SentimentDistribution = () => {
 	const [sentiment, setSentiment] = useState({});
-	const [selectedMonthFilter, setSelectedMonthFilter] = useState('last_month');
+	const [selectedMonthFilter, setSelectedMonthFilter] = useState('all');
 	const [postCategories, setPostCategories] = useState({});
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
@@ -174,7 +270,7 @@ const SentimentDistribution = () => {
 
 	useEffect(() => {
 		try {
-			const defaultSnapshot = getSnapshotByFilter('last_month');
+			const defaultSnapshot = getSnapshotByFilter('all');
 			setSentiment(defaultSnapshot.sentiment);
 			setPostCategories(defaultSnapshot.postCategories);
 		} catch (err) {
@@ -210,16 +306,20 @@ const SentimentDistribution = () => {
 		color: SENTIMENT_META[key]?.color || SENTIMENT_META.neutral.color,
 	}));
 
-	const chartData = sentimentEntries;
-	const visibleTotal = chartData.reduce((sum, item) => sum + item.value, 0);
 	const totalPosts = Number(postCategories.total_number_of_posts || 0);
+	const chartData = withPostCounts(sentimentEntries, totalPosts);
+	const visiblePostTotal = chartData.reduce(
+		(sum, item) => sum + item.postCount,
+		0,
+	);
 	const dominantSentiment = sentimentEntries.reduce(
 		(best, current) => (current.value > best.value ? current : best),
 		sentimentEntries[0] || { label: 'N/A', value: 0 },
 	) || { label: 'N/A', value: 0 };
-	const activeMonthLabel =
-		monthFilterOptions.find((option) => option.key === selectedMonthFilter)
-			?.label || 'selected period';
+	const activePeriodPhrase = getPeriodPhrase(
+		selectedMonthFilter,
+		monthFilterOptions,
+	);
 
 	let content = null;
 
@@ -260,7 +360,7 @@ const SentimentDistribution = () => {
 								</p>
 								<p className="text-sm text-slate-500 dark:text-slate-300">
 									{formatPercent(dominantSentiment.value)} of
-									total mentions
+									total posts
 								</p>
 							</div>
 						</div>
@@ -327,7 +427,7 @@ const SentimentDistribution = () => {
 														dominantBaseline="central"
 														className="fill-slate-400 text-[11px] font-medium dark:fill-slate-300"
 													>
-														Total
+														Posts
 													</text>
 													<text
 														x={viewBox.cx}
@@ -339,7 +439,7 @@ const SentimentDistribution = () => {
 														dominantBaseline="central"
 														className="fill-slate-900 text-[24px] font-semibold dark:fill-slate-50 sm:text-[30px]"
 													>
-														{visibleTotal}
+														{visiblePostTotal.toLocaleString('en')}
 													</text>
 												</g>
 											);
@@ -404,8 +504,8 @@ const SentimentDistribution = () => {
 				</div>
 					<CardDescription className="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-200">
 						Current snapshot of positive, neutral, and negative
-						conversation share across analyzed posts for the{' '}
-						{activeMonthLabel.toLowerCase()}.
+						conversation share across analyzed posts for{' '}
+						{activePeriodPhrase}.
 					</CardDescription>
 				</div>
 			</CardHeader>

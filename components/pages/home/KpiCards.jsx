@@ -71,7 +71,7 @@ const KpiCards = () => {
                   <Skeleton className="w-10 h-10 bg-slate-200 dark:bg-slate-700" />
                 ) : (
                   <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">
-                    {dashboardData?.posts_mentioning_EBL_bank}
+                    {dashboardData?.posts_mentioning_prime_bank ?? 0}
                   </p>
                 )}
               </div>

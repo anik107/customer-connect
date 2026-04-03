@@ -1,171 +1,543 @@
-"use client";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+'use client';
+
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { data } from "@/data/data";
-import { Terminal } from "lucide-react";
-import { useEffect, useState } from "react";
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { data } from '@/data/data';
+import dayjs from 'dayjs';
+import {
+	ChevronDown,
+	ChevronLeft,
+	ChevronRight,
+	ChevronUp,
+	Terminal,
+} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+
+const getMonthFilterOptions = () => [
+	{ key: 'all', label: 'All' },
+	{ key: 'last_month', label: 'Last Month' },
+	{ key: 'previous_month', label: 'Previous Month' },
+	{ key: 'month_before', label: 'Two Months Ago' },
+];
+
+const getSentimentFilterOptions = () => [
+	{ key: 'all', label: 'All Sentiments' },
+	{ key: 'positive', label: 'Positive' },
+	{ key: 'neutral', label: 'Neutral' },
+	{ key: 'negative', label: 'Negative' },
+];
+
+const getPeriodPhrase = (selectedFilter, options) => {
+	const activeLabel =
+		options.find((option) => option.key === selectedFilter)?.label ||
+		'selected period';
+
+	const phraseMap = {
+		all: 'all available periods',
+		last_month: 'last month',
+		previous_month: 'the previous month',
+		month_before: 'two months ago',
+	};
+
+	return phraseMap[selectedFilter] || activeLabel.toLowerCase();
+};
+
+const getActionItemsByFilter = (selectedFilter) => {
+	const sentimentAnalysis = data.sentiment_analysis || {};
+	if (selectedFilter === 'all') {
+		return data.action_items || [];
+	}
+
+	return (
+		data.action_items_by_month?.[selectedFilter] ||
+		data.monthly_action_items?.[selectedFilter] ||
+		sentimentAnalysis.action_items_by_month?.[selectedFilter] ||
+		sentimentAnalysis.monthly_action_items?.[selectedFilter] ||
+		data.action_items ||
+		[]
+	);
+};
+
+const SORTABLE_COLUMNS = {
+	date: 'action_date',
+	text: 'text',
+	type: 'type',
+	author_name: 'author_name',
+	share_count: 'share_count',
+	reaction_count: 'reaction_count',
+	comments_count: 'comments_count',
+	sentiment: 'sentiment',
+	category: 'category',
+	emotion: 'emotion',
+	virality_score: 'virality_score',
+};
+
+const compareValues = (leftValue, rightValue) => {
+	const left = leftValue ?? '';
+	const right = rightValue ?? '';
+
+	if (
+		typeof leftValue === 'string' &&
+		typeof rightValue === 'string' &&
+		!Number.isNaN(Date.parse(leftValue)) &&
+		!Number.isNaN(Date.parse(rightValue))
+	) {
+		return new Date(leftValue).getTime() - new Date(rightValue).getTime();
+	}
+
+	if (typeof left === 'number' && typeof right === 'number') {
+		return left - right;
+	}
+
+	return String(left).localeCompare(String(right), undefined, {
+		numeric: true,
+		sensitivity: 'base',
+	});
+};
 
 const ActionItems = () => {
-  const [actionItems, setActionItems] = useState([]);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+	const [actionItems, setActionItems] = useState([]);
+	const [selectedMonthFilter, setSelectedMonthFilter] = useState('all');
+	const [selectedSentimentFilter, setSelectedSentimentFilter] =
+		useState('all');
+	const [page, setPage] = useState(1);
+	const limit = 4;
+	const [sortConfig, setSortConfig] = useState({
+		key: 'virality_score',
+		direction: 'desc',
+	});
+	const [error, setError] = useState(null);
+	const [loading, setLoading] = useState(true);
+	const monthFilterOptions = getMonthFilterOptions();
+	const sentimentFilterOptions = getSentimentFilterOptions();
 
-  useEffect(() => {
-    // Use static action items from data.js
-    setActionItems(data.action_items || []);
-    setLoading(false);
-  }, []);
+	useEffect(() => {
+		try {
+			setActionItems(getActionItemsByFilter('all'));
+		} catch (err) {
+			setError('Unable to load action items.');
+		} finally {
+			setLoading(false);
+		}
+	}, []);
 
-  let content = null;
+	useEffect(() => {
+		try {
+			setActionItems(getActionItemsByFilter(selectedMonthFilter));
+			setError(null);
+		} catch (err) {
+			setError('Unable to load action items.');
+		}
+	}, [selectedMonthFilter]);
 
-  if (loading) {
-    content = (
-      <tr>
-        <td colSpan={11} className="text-center p-2 sm:p-3 whitespace-nowrap">
-          <Skeleton className="w-full aspect-video bg-slate-200 dark:bg-slate-700" />
-        </td>
-      </tr>
-    );
-  } else if (!loading && error) {
-    content = (
-      <tr>
-        <td colSpan={11} className="text-center p-2 sm:p-3 whitespace-nowrap">
-          <Alert variant="destructive">
-            <Terminal />
-            <AlertTitle>Error!</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        </td>
-      </tr>
-    );
-  } else if (!loading && !error && actionItems?.length === 0) {
-    content = (
-      <tr>
-        <td colSpan={11} className="text-center p-2 sm:p-3 whitespace-nowrap">
-          No posts found!
-        </td>
-      </tr>
-    );
-  } else {
-    content = actionItems.map((row, index) => (
-      <tr
-        key={index}
-        className="border-b hover:bg-slate-50/50 dark:hover:bg-slate-700/50"
-      >
-        <td className="sticky left-0 bg-white dark:bg-slate-800 p-2 sm:p-3 border-r whitespace-nowrap">
-          <div className="w-[20px] min-w-[20px] truncate font-bold" title={index + 1}>
-            {index + 1}
-          </div>
-        </td>
-        <td className="p-2 sm:p-3 whitespace-nowrap">
-          <a
-            href={row?.post_url ?? "#"}
-            target="_blank"
-            rel="noreferrer"
-            className="block w-[120px] min-w-[120px] cursor-pointer truncate text-blue-500 font-bold"
-          >
-            {row.text}
-          </a>
-        </td>
-        <td className="p-2 sm:p-3 whitespace-nowrap capitalize">{row.type}</td>
-        <td className="p-2 sm:p-3 whitespace-nowrap">{row.author_name}</td>
-        <td className="p-2 sm:p-3 whitespace-nowrap text-center">
-          {row.share_count}
-        </td>
-        <td className="p-2 sm:p-3 whitespace-nowrap text-center">
-          {row.reaction_count}
-        </td>
-        <td className="p-2 sm:p-3 whitespace-nowrap text-center">
-          {row.comments_count}
-        </td>
-        <td className="p-2 sm:p-3 whitespace-nowrap">{row.sentiment}</td>
-        <td className="p-2 sm:p-3 whitespace-nowrap">{row.category}</td>
-        <td className="p-2 sm:p-3 whitespace-nowrap">{row.emotion}</td>
-        <td className="p-2 sm:p-3 whitespace-nowrap text-center">
-          {row.virality_score}
-        </td>
-      </tr>
-    ));
-  }
+	const activePeriodPhrase = getPeriodPhrase(
+		selectedMonthFilter,
+		monthFilterOptions,
+	);
 
-  return (
-    <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-      <CardHeader>
-        <CardTitle className="text-lg sm:text-xl">Action Items</CardTitle>
-        <CardDescription className="text-sm">
-          Recommended actions based on sentiment analysis
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <h1 className="mb-3 text-base sm:text-lg font-bold text-gray-500 dark:text-slate-100">
-          Processed Posts Data
-        </h1>
-        <div className="relative">
-          <div className="max-h-[50vh] overflow-x-auto overflow-y-auto rounded-lg border sm:max-h-96">
-            <table className="min-w-full table-fixed text-xs sm:text-sm">
-              <colgroup>
-                <col style={{ width: "44px" }} />
-                <col style={{ width: "100px" }} />
-                <col />
-                <col />
-                <col />
-                <col />
-                <col />
-                <col />
-                <col />
-                <col />
-                <col />
-              </colgroup>
-              <thead className="sticky top-0 z-30 bg-slate-50 dark:bg-slate-700">
-                <tr className="border-b">
-                  <th className="sticky left-0 top-0 bg-slate-50 dark:bg-slate-700 p-2 sm:p-3 text-left font-medium border-r whitespace-nowrap z-[50]">
-                    <div className="w-[44px] min-w-[44px]">#</div>
-                  </th>
-                  <th className="sticky top-0 bg-slate-50 dark:bg-slate-700 p-2 sm:p-3 text-left font-medium min-w-[100px] whitespace-nowrap z-40">
-                    Text
-                  </th>
-                  <th className="p-2 sm:p-3 font-medium min-w-[100px] whitespace-nowrap text-left">
-                    Type
-                  </th>
-                  <th className="p-2 sm:p-3 font-medium min-w-[100px] whitespace-nowrap text-left">
-                    Person Name
-                  </th>
-                  <th className="p-2 sm:p-3 font-medium min-w-[100px] whitespace-nowrap text-center">
-                    Share Count
-                  </th>
-                  <th className="p-2 sm:p-3 text-center font-medium min-w-[60px] whitespace-nowrap">
-                    Reaction Count
-                  </th>
-                  <th className="p-2 sm:p-3 text-center font-medium min-w-[100px] whitespace-nowrap">
-                    Comment Count
-                  </th>
-                  <th className="p-2 sm:p-3 text-left font-medium min-w-[60px] whitespace-nowrap">
-                    Sentiment
-                  </th>
-                  <th className="p-2 sm:p-3 text-left font-medium min-w-[80px] whitespace-nowrap">
-                    Category
-                  </th>
-                  <th className="p-2 sm:p-3 text-left font-medium min-w-[80px] whitespace-nowrap">
-                    Emotion
-                  </th>
-                  <th className="p-2 sm:p-3 text-center font-medium min-w-[80px] whitespace-nowrap">
-                    Virality Score
-                  </th>
-                </tr>
-              </thead>
-              <tbody>{content}</tbody>
-            </table>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+	const datedActionItems = useMemo(() => {
+		const baseDates = {
+			all: '2025-06-30T12:00:00.000Z',
+			last_month: '2025-06-20T12:00:00.000Z',
+			previous_month: '2025-05-20T12:00:00.000Z',
+			month_before: '2025-04-20T12:00:00.000Z',
+		};
+		const baseDate =
+			baseDates[selectedMonthFilter] || baseDates.last_month;
+
+		return actionItems.map((item, index) => ({
+			...item,
+			action_date: dayjs(baseDate).subtract(index, 'day').toISOString(),
+		}));
+	}, [actionItems, selectedMonthFilter]);
+
+	const sortedActionItems = useMemo(() => {
+		const items = datedActionItems.filter((item) => {
+			if (selectedSentimentFilter === 'all') {
+				return true;
+			}
+
+			return (
+				String(item.sentiment || '').toLowerCase() ===
+				selectedSentimentFilter
+			);
+		});
+
+		if (!sortConfig.key) {
+			return [...items];
+		}
+
+		return [...items].sort((left, right) => {
+			const comparison = compareValues(
+				left?.[sortConfig.key],
+				right?.[sortConfig.key],
+			);
+
+			return sortConfig.direction === 'asc' ? comparison : -comparison;
+		});
+	}, [datedActionItems, selectedSentimentFilter, sortConfig]);
+
+	useEffect(() => {
+		setPage(1);
+	}, [selectedMonthFilter, selectedSentimentFilter, sortConfig]);
+
+	const totalResults = sortedActionItems.length;
+	const effectiveLimit =
+		selectedMonthFilter === 'all' ? Math.max(totalResults, 1) : limit;
+	const lastPage = Math.max(1, Math.ceil(totalResults / effectiveLimit));
+	const paginatedActionItems = sortedActionItems.slice(
+		(page - 1) * effectiveLimit,
+		page * effectiveLimit,
+	);
+	const visibleStart =
+		totalResults === 0 ? 0 : (page - 1) * effectiveLimit + 1;
+	const visibleEnd =
+		totalResults === 0
+			? 0
+			: Math.min(
+					(page - 1) * effectiveLimit + paginatedActionItems.length,
+					totalResults,
+				);
+
+	const handlePageChange = (newPage) => {
+		if (newPage > lastPage || newPage === 0) return;
+		setPage(newPage);
+	};
+
+	const handleSort = (key) => {
+		setSortConfig((current) => {
+			if (current.key === key) {
+				return {
+					key,
+					direction: current.direction === 'asc' ? 'desc' : 'asc',
+				};
+			}
+
+			return {
+				key,
+				direction: 'asc',
+			};
+		});
+	};
+
+	const renderSortableHeader = (label, key, align = 'left') => {
+		const isActive = sortConfig.key === key;
+		const buttonAlignment =
+			align === 'center'
+				? 'mx-auto justify-center text-center'
+				: 'justify-start text-left';
+
+		return (
+			<button
+				type="button"
+				onClick={() => handleSort(key)}
+				className={`inline-flex items-center gap-1 ${buttonAlignment} transition hover:text-slate-900 dark:hover:text-slate-100`}
+			>
+				<span>{label}</span>
+				<span className="flex flex-col">
+					<ChevronUp
+						className={`h-3 w-3 ${
+							isActive && sortConfig.direction === 'asc'
+								? 'text-blue-600 dark:text-blue-400'
+								: 'text-slate-300 dark:text-slate-500'
+						}`}
+					/>
+					<ChevronDown
+						className={`-mt-1 h-3 w-3 ${
+							isActive && sortConfig.direction === 'desc'
+								? 'text-blue-600 dark:text-blue-400'
+								: 'text-slate-300 dark:text-slate-500'
+						}`}
+					/>
+				</span>
+			</button>
+		);
+	};
+
+	let content = null;
+
+	if (loading) {
+		content = (
+			<tr>
+				<td
+					colSpan={12}
+					className="whitespace-nowrap p-2 text-center sm:p-3"
+				>
+					<Skeleton className="aspect-video w-full bg-slate-200 dark:bg-slate-700" />
+				</td>
+			</tr>
+		);
+	} else if (error) {
+		content = (
+			<tr>
+				<td
+					colSpan={12}
+					className="whitespace-nowrap p-2 text-center sm:p-3"
+				>
+					<Alert variant="destructive">
+						<Terminal />
+						<AlertTitle>Error!</AlertTitle>
+						<AlertDescription>{error}</AlertDescription>
+					</Alert>
+				</td>
+			</tr>
+		);
+	} else if (paginatedActionItems?.length === 0) {
+		content = (
+			<tr>
+				<td
+					colSpan={12}
+					className="whitespace-nowrap p-2 text-center sm:p-3"
+				>
+					No posts found!
+				</td>
+			</tr>
+		);
+	} else {
+		content = paginatedActionItems.map((row, index) => (
+			<tr
+				key={index}
+				className="border-b hover:bg-slate-50/50 dark:hover:bg-slate-700/50"
+			>
+				<td className="sticky left-0 whitespace-nowrap border-r bg-white p-2 dark:bg-slate-800 sm:p-3">
+					<div
+						className="w-[28px] min-w-[28px] truncate font-bold"
+						title={(page - 1) * limit + index + 1}
+					>
+						{(page - 1) * limit + index + 1}
+					</div>
+				</td>
+				<td className="whitespace-nowrap p-2 sm:p-3">
+					<a
+						href={row?.post_url ?? '#'}
+						target="_blank"
+						rel="noreferrer"
+						className="block w-[88px] min-w-[88px] cursor-pointer truncate font-bold text-blue-500"
+					>
+						{row.text}
+					</a>
+				</td>
+				<td className="whitespace-nowrap p-2 sm:p-3">
+					{dayjs(row.action_date).format('DD MMM, YYYY')}
+				</td>
+				<td className="whitespace-nowrap p-2 capitalize sm:p-3">
+					{row.type}
+				</td>
+				<td className="whitespace-nowrap p-2 sm:p-3">
+					{row.author_name}
+				</td>
+				<td className="whitespace-nowrap p-2 text-center sm:p-3">
+					{row.share_count}
+				</td>
+				<td className="whitespace-nowrap p-2 text-center sm:p-3">
+					{row.reaction_count}
+				</td>
+				<td className="whitespace-nowrap p-2 text-center sm:p-3">
+					{row.comments_count}
+				</td>
+				<td className="whitespace-nowrap p-2 sm:p-3">
+					{row.sentiment}
+				</td>
+				<td className="whitespace-nowrap p-2 sm:p-3">{row.category}</td>
+				<td className="whitespace-nowrap p-2 sm:p-3">{row.emotion}</td>
+				<td className="whitespace-nowrap p-2 text-center sm:p-3">
+					{row.virality_score}
+				</td>
+			</tr>
+		));
+	}
+
+	return (
+		<Card className="border-0 bg-white/80 shadow-lg backdrop-blur-sm dark:bg-slate-800/80">
+			<CardHeader className="gap-3">
+				<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+					<div>
+						<CardTitle className="text-lg sm:text-xl">
+							Action Items
+						</CardTitle>
+						<CardDescription className="mt-1 text-sm">
+							Recommended actions based on sentiment analysis for
+							{' '}{activePeriodPhrase}.
+						</CardDescription>
+					</div>
+					<div className="grid w-full gap-3 sm:w-auto sm:min-w-[220px] sm:grid-cols-2">
+						<div className="relative">
+							<select
+								id="action-items-sentiment-filter"
+								value={selectedSentimentFilter}
+								onChange={(event) =>
+									setSelectedSentimentFilter(
+										event.target.value,
+									)
+								}
+								className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-10 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:shadow-none dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
+							>
+								{sentimentFilterOptions.map((option) => (
+									<option key={option.key} value={option.key}>
+										{option.label}
+									</option>
+								))}
+							</select>
+							<ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-300" />
+						</div>
+						<div className="relative">
+							<select
+								id="action-items-month-filter"
+								value={selectedMonthFilter}
+								onChange={(event) =>
+									setSelectedMonthFilter(event.target.value)
+								}
+								className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-10 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:shadow-none dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
+							>
+								{monthFilterOptions.map((option) => (
+									<option key={option.key} value={option.key}>
+										{option.label}
+									</option>
+								))}
+							</select>
+							<ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-300" />
+						</div>
+					</div>
+				</div>
+			</CardHeader>
+			<CardContent>
+				<h1 className="mb-3 text-base font-bold text-gray-500 dark:text-slate-100 sm:text-lg">
+					Processed Posts Data
+				</h1>
+				<div className="relative">
+					<div className="max-h-[50vh] overflow-x-auto overflow-y-auto rounded-lg border sm:max-h-96">
+						<table className="min-w-full table-fixed text-xs sm:text-sm">
+							<colgroup>
+								<col style={{ width: '44px' }} />
+								<col style={{ width: '96px' }} />
+								<col style={{ width: '96px' }} />
+								<col style={{ width: '72px' }} />
+								<col style={{ width: '112px' }} />
+								<col style={{ width: '64px' }} />
+								<col style={{ width: '72px' }} />
+								<col style={{ width: '72px' }} />
+								<col style={{ width: '84px' }} />
+								<col style={{ width: '88px' }} />
+								<col style={{ width: '88px' }} />
+								<col style={{ width: '88px' }} />
+							</colgroup>
+							<thead className="sticky top-0 z-30 bg-slate-50 dark:bg-slate-700">
+								<tr className="border-b">
+									<th className="sticky left-0 top-0 z-[50] whitespace-nowrap border-r bg-slate-50 p-2 text-left font-medium dark:bg-slate-700 sm:p-3">
+										<div className="w-[44px] min-w-[44px]">
+											#
+										</div>
+									</th>
+									<th className="sticky top-0 z-40 min-w-[96px] whitespace-nowrap bg-slate-50 p-2 text-left font-medium dark:bg-slate-700 sm:p-3">
+										{renderSortableHeader(
+											'Text',
+											SORTABLE_COLUMNS.text,
+										)}
+									</th>
+									<th className="sticky top-0 z-40 min-w-[96px] whitespace-nowrap bg-slate-50 p-2 text-left font-medium dark:bg-slate-700 sm:p-3">
+										{renderSortableHeader(
+											'Date',
+											SORTABLE_COLUMNS.date,
+										)}
+									</th>
+									<th className="min-w-[72px] whitespace-nowrap p-2 text-left font-medium sm:p-3">
+										{renderSortableHeader(
+											'Type',
+											SORTABLE_COLUMNS.type,
+										)}
+									</th>
+									<th className="min-w-[112px] whitespace-nowrap p-2 text-left font-medium sm:p-3">
+										{renderSortableHeader(
+											'Name',
+											SORTABLE_COLUMNS.author_name,
+										)}
+									</th>
+									<th className="min-w-[64px] whitespace-nowrap p-2 text-center font-medium sm:p-3">
+										{renderSortableHeader(
+											'Share',
+											SORTABLE_COLUMNS.share_count,
+											'center',
+										)}
+									</th>
+									<th className="min-w-[72px] whitespace-nowrap p-2 text-center font-medium sm:p-3">
+										{renderSortableHeader(
+											'Reaction',
+											SORTABLE_COLUMNS.reaction_count,
+											'center',
+										)}
+									</th>
+									<th className="min-w-[72px] whitespace-nowrap p-2 text-center font-medium sm:p-3">
+										{renderSortableHeader(
+											'Comment',
+											SORTABLE_COLUMNS.comments_count,
+											'center',
+										)}
+									</th>
+									<th className="min-w-[84px] whitespace-nowrap p-2 text-left font-medium sm:p-3">
+										{renderSortableHeader(
+											'Sentiment',
+											SORTABLE_COLUMNS.sentiment,
+										)}
+									</th>
+									<th className="min-w-[88px] whitespace-nowrap p-2 text-left font-medium sm:p-3">
+										{renderSortableHeader(
+											'Category',
+											SORTABLE_COLUMNS.category,
+										)}
+									</th>
+									<th className="min-w-[88px] whitespace-nowrap p-2 text-left font-medium sm:p-3">
+										{renderSortableHeader(
+											'Emotion',
+											SORTABLE_COLUMNS.emotion,
+										)}
+									</th>
+									<th className="min-w-[88px] whitespace-nowrap p-2 text-center font-medium sm:p-3">
+										{renderSortableHeader(
+											'Virality Score',
+											SORTABLE_COLUMNS.virality_score,
+											'center',
+										)}
+									</th>
+								</tr>
+							</thead>
+							<tbody>{content}</tbody>
+						</table>
+					</div>
+				</div>
+				<div className="mt-6 flex items-center justify-between">
+					<div className="text-sm text-gray-600">
+						Showing {visibleStart} to {visibleEnd} of {totalResults}{' '}
+						results
+					</div>
+					<div className="flex flex-row items-center justify-center">
+						<button
+							type="button"
+							className="flex h-[36px] w-[36px] cursor-pointer items-center justify-center rounded-l-sm border border-[#B0B1B7] text-[#0D3D4B] disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
+							onClick={() => handlePageChange(page - 1)}
+							disabled={page === 1}
+						>
+							<ChevronLeft className="size-6" />
+						</button>
+						<button
+							type="button"
+							className="flex h-[36px] w-[36px] cursor-pointer items-center justify-center rounded-r-sm border border-[#B0B1B7] border-l-0 text-[#0D3D4B] disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
+							onClick={() => handlePageChange(page + 1)}
+							disabled={page === lastPage}
+						>
+							<ChevronRight className="size-6" />
+						</button>
+					</div>
+				</div>
+			</CardContent>
+		</Card>
+	);
 };
+
 export default ActionItems;
