@@ -84,8 +84,8 @@ export default function AiOverview() {
             <div className="max-w-7xl mx-auto px-6 py-8 sm:px-8 sm:py-10">
                 
                 {/* Hero Header */}
-                <header className="bg-gradient-to-b from-blue-600 to-blue-500 rounded-3xl p-8 md:p-10 text-white shadow-lg mb-10">
-                    <h1 className="text-3xl md:text-4xl font-extrabold mt-4">AI Overview</h1>
+                <header className="bg-gradient-to-b from-blue-600 to-blue-600 rounded-3xl p-8 md:p-10 text-white shadow-lg mb-10">
+                    <h1 className="font-semibold text-lg sm:text-xl">AI Overview</h1>
                     <p className="m-0 max-w-[850px] text-white/90 text-[15px] leading-[1.6]">
                       Detailed emotion breakdown across all posts and comments. Each insight below is generated from multiple Facebook posts. Click any item to open a detailed popup with explanation and links to all related posts.
                     </p>
@@ -116,7 +116,7 @@ export default function AiOverview() {
                                             <span className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-widest ${style.badge}`}>
                                                 {catKey}
                                             </span>
-                                            <h2 className="text-xl md:text-2xl font-bold capitalize">{catKey} Analysis</h2>
+                                            <h2 className="font-semibold text-lg sm:text-xl">{catKey} Analysis</h2>
                                         </div>
                                         <p className="text-xs text-slate-500 dark:text-slate-400">Click any insight to view evidence and related Facebook posts</p>
                                     </div>
@@ -128,7 +128,7 @@ export default function AiOverview() {
                                                 onClick={() => setModalData({ title: formatTitle(key), content: value, type: catKey })}
                                                 className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(15,23,42,0.12)] hover:border-blue-200 cursor-pointer dark:border-[#31415d] dark:bg-[#24324a] dark:hover:border-blue-500/40"
                                             >
-                                                <h3 className="font-bold text-slate-800 mb-3 dark:text-slate-100">
+                                                <h3 className="font-semibold text-lg sm:text-md text-slate-900 dark:text-slate-100">
                                                     {formatTitle(key)}
                                                 </h3>
                                                 <p className="text-sm text-slate-500 leading-relaxed dark:text-slate-300">
