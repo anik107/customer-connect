@@ -86,7 +86,7 @@ export default function AiOverview() {
                     <div data-slot="card-title" className="font-semibold text-lg sm:text-xl">
                         AI Overview
                     </div>
-                    <div data-slot="card-description" className="text-muted-foreground mt-1 text-sm max-w-[850px] leading-[1.6]">
+                    <div data-slot="card-description" className="text-muted-foreground mt-1 text-sm leading-[1.6]">
                         Detailed emotion breakdown across all posts and comments. Each insight below is generated from multiple Facebook posts. Click any item to open a detailed popup with explanation and links to all related posts.
                     </div>
                 </div>
