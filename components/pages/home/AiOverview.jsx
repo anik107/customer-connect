@@ -82,14 +82,14 @@ export default function AiOverview() {
     return (
         <div className="rounded-[20px] border border-slate-200/80 bg-white/90 text-slate-900 shadow-lg backdrop-blur-sm font-sans dark:border-[#2c3b57] dark:bg-[#202d45] dark:text-slate-100">
             <div className="max-w-7xl mx-auto px-6 py-8 sm:px-8 sm:py-10">
-                
-                {/* Hero Header */}
-                <header className="bg-gradient-to-b from-blue-600 to-blue-600 rounded-3xl p-8 md:p-10 text-white shadow-lg mb-10">
-                    <h1 className="font-semibold text-lg sm:text-xl">AI Overview</h1>
-                    <p className="m-0 max-w-[850px] text-white/90 text-[15px] leading-[1.6]">
-                      Detailed emotion breakdown across all posts and comments. Each insight below is generated from multiple Facebook posts. Click any item to open a detailed popup with explanation and links to all related posts.
-                    </p>
-                </header>
+                <div className="mb-10">
+                    <div data-slot="card-title" className="font-semibold text-lg sm:text-xl">
+                        AI Overview
+                    </div>
+                    <div data-slot="card-description" className="text-muted-foreground mt-1 text-sm max-w-[850px] leading-[1.6]">
+                        Detailed emotion breakdown across all posts and comments. Each insight below is generated from multiple Facebook posts. Click any item to open a detailed popup with explanation and links to all related posts.
+                    </div>
+                </div>
 
                 {error && (
                     <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-xl border border-red-200 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300">
@@ -106,7 +106,7 @@ export default function AiOverview() {
                             const style = getCategoryStyles(catKey);
                             // Ensure insights exists (handle suggestions vs analysis naming)
                             const insights = catValue?.analysis || catValue?.ai_recommendations;
-                            
+
                             if (!insights) return null;
                             return (
                                 <section key={catKey}>
@@ -115,7 +115,7 @@ export default function AiOverview() {
                                             <span className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-widest ${style.badge}`}>
                                                 {catKey}
                                             </span>
-                                            <h2 className="font-semibold text-lg sm:text-xl">{catKey} Analysis</h2>
+                                            <h2 className="font-semibold text-lg sm:text-xl">{ catKey[0].toUpperCase() + catKey.slice(1)}</h2>
                                         </div>
                                         <p className="text-xs text-slate-500 dark:text-slate-400">Click any insight to view evidence and related Facebook posts</p>
                                     </div>
@@ -151,11 +151,11 @@ export default function AiOverview() {
 
             {/* Detail Modal */}
             {mounted && modalData && createPortal(
-                <div 
+                <div
                     className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 transition-opacity duration-150"
                     onClick={() => setModalData(null)}
                 >
-                    <div 
+                    <div
                         className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden transform-gpu transition-transform duration-150 ease-out dark:bg-slate-800"
                         onClick={e => e.stopPropagation()}
                     >
@@ -220,7 +220,7 @@ export default function AiOverview() {
                         </div>
                     </div>
                 </div>
-            , document.body)}
+                , document.body)}
             <style jsx global>{`
                 .post-link-icon {
                     width: 40px;
