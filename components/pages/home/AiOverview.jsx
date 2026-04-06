@@ -8,7 +8,6 @@ import { getAiOverview } from "@/services/aiOverview.service";
 const formatTitle = (str) => {
     return str.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 };
-
 const getCategoryStyles = (category) => {
     const styles = {
         complaints: { bg: "bg-red-50", text: "text-red-700", border: "border-red-100", badge: "bg-red-100 text-red-600" },
